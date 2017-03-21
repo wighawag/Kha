@@ -294,27 +294,29 @@ class SystemImpl {
 		var gl: Bool = false;
 
 		#if webgl
-		try {
-			SystemImpl.gl = canvas.getContext("experimental-webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
-			if (SystemImpl.gl != null) {
-				SystemImpl.gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-				SystemImpl.gl.getExtension("OES_texture_float");
-				SystemImpl.gl.getExtension("OES_texture_float_linear");
-				halfFloat = SystemImpl.gl.getExtension("OES_texture_half_float");
-				SystemImpl.gl.getExtension("OES_texture_half_float_linear");
-				depthTexture = SystemImpl.gl.getExtension("WEBGL_depth_texture");
-				SystemImpl.gl.getExtension("EXT_shader_texture_lod");
-				SystemImpl.gl.getExtension("OES_standard_derivatives");
-				anisotropicFilter = SystemImpl.gl.getExtension("EXT_texture_filter_anisotropic");
-				if (anisotropicFilter == null) anisotropicFilter = SystemImpl.gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
-				drawBuffers = SystemImpl.gl.getExtension('WEBGL_draw_buffers');
-				elementIndexUint = SystemImpl.gl.getExtension("OES_element_index_uint");
-				gl = true;
-				Shaders.init();
+		if(js.Browser.window.location.search.indexOf("webgl=off") == -1){
+			try {
+				SystemImpl.gl = canvas.getContext("experimental-webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
+				if (SystemImpl.gl != null) {
+					SystemImpl.gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+					SystemImpl.gl.getExtension("OES_texture_float");
+					SystemImpl.gl.getExtension("OES_texture_float_linear");
+					halfFloat = SystemImpl.gl.getExtension("OES_texture_half_float");
+					SystemImpl.gl.getExtension("OES_texture_half_float_linear");
+					depthTexture = SystemImpl.gl.getExtension("WEBGL_depth_texture");
+					SystemImpl.gl.getExtension("EXT_shader_texture_lod");
+					SystemImpl.gl.getExtension("OES_standard_derivatives");
+					anisotropicFilter = SystemImpl.gl.getExtension("EXT_texture_filter_anisotropic");
+					if (anisotropicFilter == null) anisotropicFilter = SystemImpl.gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+					drawBuffers = SystemImpl.gl.getExtension('WEBGL_draw_buffers');
+					elementIndexUint = SystemImpl.gl.getExtension("OES_element_index_uint");
+					gl = true;
+					Shaders.init();
+				}
 			}
-		}
-		catch (e: Dynamic) {
-			trace(e);
+			catch (e: Dynamic) {
+				trace(e);
+			}	
 		}
 		#end
 
@@ -334,20 +336,28 @@ class SystemImpl {
 		}
 		//canvas.getContext("2d").scale(transform, transform);
 
-		if (!mobile && kha.audio2.Audio._init()) {
-			SystemImpl._hasWebAudio = true;
-			kha.audio2.Audio1._init();
+		if(!mobile){
+			mobile = js.Browser.window.location.search.indexOf("mobile=force") != -1;
 		}
-		else if (mobile) {
-			SystemImpl._hasWebAudio = false;
-			MobileWebAudio._init();
-			untyped __js__ ("kha_audio2_Audio1 = kha_js_MobileWebAudio");
+		
+
+		if(js.Browser.window.location.search.indexOf("audio=off") == -1){
+			if (!mobile && kha.audio2.Audio._init()) {
+				SystemImpl._hasWebAudio = true;
+				kha.audio2.Audio1._init();
+			}
+			else if (mobile) {
+				SystemImpl._hasWebAudio = false;
+				MobileWebAudio._init();
+				untyped __js__ ("kha_audio2_Audio1 = kha_js_MobileWebAudio");
+			}
+			else {
+				SystemImpl._hasWebAudio = false;
+				AudioElementAudio._compile();
+				untyped __js__ ("kha_audio2_Audio1 = kha_js_AudioElementAudio");
+			}
 		}
-		else {
-			SystemImpl._hasWebAudio = false;
-			AudioElementAudio._compile();
-			untyped __js__ ("kha_audio2_Audio1 = kha_js_AudioElementAudio");
-		}
+
 		
 		kha.vr.VrInterface.instance = new VrInterface();
 
@@ -517,7 +527,7 @@ class SystemImpl {
 	private static var iosSoundEnabled: Bool = false;
 
 	private static function unlockSoundOnIOS(): Void {
-		if (!mobile || iosSoundEnabled) return;
+		if (!mobile || iosSoundEnabled || js.Browser.window.location.search.indexOf("audio=off") != -1) return;
 		
 		var buffer = MobileWebAudio._context.createBuffer(1, 1, 22050);
 		var source = MobileWebAudio._context.createBufferSource();
